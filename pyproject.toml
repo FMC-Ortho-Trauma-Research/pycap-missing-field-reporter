@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycap_missing_reporter"
+version = "0.1a1"
+authors = [
+    {name = "Souvik Maiti", email = "souvik.maiti1@ucalgary.ca"}
+]
+description = "Scripts to find missing values in data exported from REDCap"
+readme = "README.rst"
+requires-python = ">=3.11"
+dependencies = [
+    "lark",
+    "pandas",
+    "pycap",
+    "python-dotenv",
+]
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+
+# Match PEP-8 guidelines
+line-length = 79
+indent-width = 4
+
+# Match current project Python version
+target-version = "py311"
+
+# Verbose error output
+output-format = "full"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # modules
+    "DJ",  # Django
+    "EXE", # Executables
+
+    # specifics
+    "D100", # --- Missing docstrings ---
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107", # --- Missing docstrings ---
+    "D205", # Blank between summary and description
+    "D212", # Multi-line docstring summary should start at the first line
+    "D401", # First line should be in imperative mood
+    "D415", # First line should end with punctuation
+    "E402", # False positives for local imports
+    "Q000", # Double quotes preferred over single quotes
+    "TD002", # Missing TODO author
+    "TD003", # Missing TODO link on following line
+    "FIX002", # Too verbose descriptions of TODOs
+]
