@@ -3,8 +3,8 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pycap_missing_reporter"
-version = "0.1a1"
+name = "pycap_mfr"
+version = "0.0.1-a"
 authors = [
     {name = "Souvik Maiti", email = "souvik.maiti1@ucalgary.ca"}
 ]

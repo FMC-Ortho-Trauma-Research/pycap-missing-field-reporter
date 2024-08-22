@@ -4,9 +4,9 @@ from distutils.util import strtobool
 
 from dotenv import load_dotenv
 
-from pycap_missing_reporter.config import DATA_DIR, ROOT_DIR
-from pycap_missing_reporter.dataframe_builder import DataFrameBuilder
-from pycap_missing_reporter.redcap_facade import REDCapFacade
+from pycap_mfr.data.config.config import DATA_DIR, ROOT_DIR
+from pycap_mfr.dataframe_builder import DataFrameBuilder
+from pycap_mfr.redcap_facade import REDCapFacade
 
 
 def _load_env_vars(dev: bool | None = False) -> None:

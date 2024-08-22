@@ -13,7 +13,9 @@ __pycache__/
 .vscode/
 
 # Data
-data/
+cache/
+export/
+logs/
 
 # Scratch files
 scratch.ipynb
