@@ -48,3 +48,8 @@ _METADATA_COLS = [
     "select_choices_or_calculations",
     "branching_logic",
 ]
+
+EMBEDDED_FIELDS_PATT = r"{(?P<field_name>(?!\d)[a-z0-9_]+(?<!_))(?::icons)?}"
+
+with Path.open(DATA_DIR / "config" / "redcap_logic_grammar.lark", 'r') as f:
+    REDCAP_LOGIC_GRAMMAR = f.read()

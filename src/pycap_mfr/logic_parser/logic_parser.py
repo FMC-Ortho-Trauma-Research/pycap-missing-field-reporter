@@ -3,4 +3,6 @@ from abc import ABC, abstractmethod
 
 class LogicParser(ABC):
 
-    raise NotImplementedError
+    @abstractmethod
+    def evaluate(self, expression: str) -> bool | str:
+        raise NotImplementedError

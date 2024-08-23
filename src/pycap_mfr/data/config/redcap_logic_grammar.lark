@@ -1,0 +1,40 @@
+start: logic_str
+
+logic_str: and_term
+    | logic_str OR and_term -> or_operation
+
+and_term: term
+    | and_term AND term -> and_operation
+
+term: comparison
+    | "(" logic_str ")"
+
+comparison: categorical_comparison
+    | numeric_comparison
+
+categorical_comparison: field_name "=" categorical_value -> eq
+    | field_name "!=" categorical_value -> ne
+
+numeric_comparison: field_name "=" numeric_value -> eq
+                    | field_name "!=" numeric_value -> ne
+                    | field_name "<>" numeric_value -> ne
+                    | field_name ">" numeric_value -> gt
+                    | field_name "<" numeric_value -> lt
+                    | field_name ">=" numeric_value -> gte
+                    | field_name "<=" numeric_value -> lte
+
+field_name: "[" CNAME "]"
+
+categorical_value: "'" (CNAME | SIGNED_NUMBER) "'"
+
+numeric_value: SIGNED_NUMBER
+                | ESCAPED_STRING
+
+AND: "AND"i
+OR: "OR"i
+
+%import common.CNAME
+%import common.SIGNED_NUMBER
+%import common.ESCAPED_STRING
+%import common.WS
+%ignore WS
