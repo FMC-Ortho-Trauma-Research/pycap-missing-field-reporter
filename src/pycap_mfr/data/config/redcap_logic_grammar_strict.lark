@@ -1,0 +1,51 @@
+start: redcap_logic_string
+
+?redcap_logic_string: or
+
+?or: and
+    | or "OR"i and
+
+?and: comparison
+    | and "AND"i comparison
+
+?comparison: field_reference operator value
+           | "'" CNAME "'" operator value
+           | "'" SIGNED_NUMBER "'" operator value
+           | SIGNED_NUMBER operator value
+
+?value: "'" CNAME "'" 
+      | "'" SIGNED_NUMBER "'"
+      | SIGNED_NUMBER
+
+?unary: not
+    | atom
+
+?not: "!" unary
+
+?atom: field_reference
+    | "'" CNAME "'"
+    | "'" SIGNED_NUMBER "'"
+    | SIGNED_NUMBER
+    | "(" redcap_logic_string ")"
+
+?operator: gt
+        | lt
+        | ge
+        | le
+        | eq
+        | neq
+
+gt: ">"
+lt: "<"
+ge: ">="
+le: "<="
+eq: "="
+neq: "<>"
+
+field_reference: "[" CNAME "]"
+
+%import common.CNAME
+%import common.SIGNED_NUMBER
+%import common.WORD
+%import common.WS
+%ignore WS

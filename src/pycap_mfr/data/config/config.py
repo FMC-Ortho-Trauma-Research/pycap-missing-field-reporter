@@ -53,3 +53,6 @@ EMBEDDED_FIELDS_PATT = r"{(?P<field_name>(?!\d)[a-z0-9_]+(?<!_))(?::icons)?}"
 
 with Path.open(DATA_DIR / "config" / "redcap_logic_grammar.lark", 'r') as f:
     REDCAP_LOGIC_GRAMMAR = f.read()
+
+with Path.open(DATA_DIR / "config" / "redcap_logic_grammar_strict.lark", 'r') as f:
+    STRICT_REDCAP_LOGIC_GRAMMAR = f.read()

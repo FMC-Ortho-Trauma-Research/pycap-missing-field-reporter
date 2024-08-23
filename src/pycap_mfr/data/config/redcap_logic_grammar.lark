@@ -1,40 +1,30 @@
-start: logic_str
+start: expression
 
-logic_str: and_term
-    | logic_str OR and_term -> or_operation
+?expression: equality
 
-and_term: term
-    | and_term AND term -> and_operation
+?equality: (comparison ( "=" | "<>" ))* comparison
 
-term: comparison
-    | "(" logic_str ")"
+?comparison: (bitwise_or ( ">" | ">=" | "<" | "<=" ))* bitwise_or
 
-comparison: categorical_comparison
-    | numeric_comparison
+?bitwise_or: (bitwise_and "OR"i)* bitwise_and
 
-categorical_comparison: field_name "=" categorical_value -> eq
-    | field_name "!=" categorical_value -> ne
+?bitwise_and: (unary "AND"i)* unary
 
-numeric_comparison: field_name "=" numeric_value -> eq
-                    | field_name "!=" numeric_value -> ne
-                    | field_name "<>" numeric_value -> ne
-                    | field_name ">" numeric_value -> gt
-                    | field_name "<" numeric_value -> lt
-                    | field_name ">=" numeric_value -> gte
-                    | field_name "<=" numeric_value -> lte
+?unary: "!" unary
+    | primary
 
-field_name: "[" CNAME "]"
+?primary: REDCAP_FIELD -> redcap_field
+    | REDCAP_STRING -> redcap_string
+    | SIGNED_NUMBER -> redcap_number
+    | "(" expression ")"
 
-categorical_value: "'" (CNAME | SIGNED_NUMBER) "'"
+REDCAP_FIELD: "[" CNAME "]"
 
-numeric_value: SIGNED_NUMBER
-                | ESCAPED_STRING
-
-AND: "AND"i
-OR: "OR"i
+REDCAP_STRING: "'" CNAME "'"
+    | "'" SIGNED_NUMBER "'"
 
 %import common.CNAME
 %import common.SIGNED_NUMBER
-%import common.ESCAPED_STRING
+%import common.WORD
 %import common.WS
 %ignore WS
