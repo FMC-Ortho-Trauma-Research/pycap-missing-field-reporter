@@ -1,51 +1,29 @@
-start: redcap_logic_string
+start: or_term
 
-?redcap_logic_string: or
+?or_term: and_term
+    | or_term "OR"i and_term
 
-?or: and
-    | or "OR"i and
+?and_term: not_term
+    | and_term "AND"i not_term
 
-?and: comparison
-    | and "AND"i comparison
+?not_term: "!" not_term -> unary_not
+    | comparison
 
-?comparison: field_reference operator value
-           | "'" CNAME "'" operator value
-           | "'" SIGNED_NUMBER "'" operator value
-           | SIGNED_NUMBER operator value
+?comparison: atom
+    | atom num_operation atom -> numeric_comparison
+    | atom cat_operation atom -> categorical_comparison
 
-?value: "'" CNAME "'" 
-      | "'" SIGNED_NUMBER "'"
-      | SIGNED_NUMBER
+?atom: "(" or_term ")"
+    | "[" CNAME "]" -> field_reference
+    | SIGNED_NUMBER -> number
+    | "'" SIGNED_NUMBER "'" -> category
+    | "'" CNAME "'" -> text
 
-?unary: not
-    | atom
-
-?not: "!" unary
-
-?atom: field_reference
-    | "'" CNAME "'"
-    | "'" SIGNED_NUMBER "'"
-    | SIGNED_NUMBER
-    | "(" redcap_logic_string ")"
-
-?operator: gt
-        | lt
-        | ge
-        | le
-        | eq
-        | neq
-
-gt: ">"
-lt: "<"
-ge: ">="
-le: "<="
-eq: "="
-neq: "<>"
-
-field_reference: "[" CNAME "]"
+!num_operation: "<" | "<=" | ">" | ">="
+!cat_operation: "=" -> eq
+    | "<>" -> ne
 
 %import common.CNAME
 %import common.SIGNED_NUMBER
-%import common.WORD
 %import common.WS
 %ignore WS
