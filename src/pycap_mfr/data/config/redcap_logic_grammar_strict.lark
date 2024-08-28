@@ -1,4 +1,4 @@
-start: or_term
+?start: or_term
 
 ?or_term: and_term
     | or_term "OR"i and_term

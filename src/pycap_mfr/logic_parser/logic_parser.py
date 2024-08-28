@@ -4,5 +4,5 @@ from abc import ABC, abstractmethod
 class LogicParser(ABC):
 
     @abstractmethod
-    def evaluate(self, expression: str) -> bool | str:
+    def translate(self, expression: str) -> str:
         raise NotImplementedError
