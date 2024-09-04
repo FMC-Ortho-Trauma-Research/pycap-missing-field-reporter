@@ -18,6 +18,7 @@
     | SIGNED_NUMBER -> number
     | "'" SIGNED_NUMBER "'" -> category
     | "'" CNAME "'" -> text
+    | "''" -> none
 
 !num_operation: "<" | "<=" | ">" | ">="
 !cat_operation: "=" -> eq

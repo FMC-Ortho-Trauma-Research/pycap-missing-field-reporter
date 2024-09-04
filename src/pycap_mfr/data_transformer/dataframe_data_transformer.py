@@ -1,11 +1,16 @@
+import re
 from typing import ClassVar
 
+import pandas as pd
+
+from pycap_mfr.data.config.config import EMBEDDED_FIELDS_LIT
 from pycap_mfr.data_loader.data_loader import DataLoader
 from pycap_mfr.data_transformer.data_transformer import DataTransformer
 
 
 class DataFrameDataTransformer(DataTransformer):
     _instances: ClassVar[dict[int, "DataFrameDataTransformer"]] = {}
+    _EMBEDDED_FIELDS_PATT = re.compile(EMBEDDED_FIELDS_LIT)
 
     def __init__(self, data_loader: DataLoader) -> None:
         if not hasattr(self, "_initialized"):
@@ -32,7 +37,8 @@ class DataFrameDataTransformer(DataTransformer):
 
     @classmethod
     def get_instance(
-        cls, data_loader: DataLoader,
+        cls,
+        data_loader: DataLoader,
     ) -> "DataFrameDataTransformer":
         data_loader_hash = hash(data_loader)
         if data_loader_hash not in cls._instances:
@@ -84,3 +90,20 @@ class DataFrameDataTransformer(DataTransformer):
                 .to_dict()
             )
         return self._data_structs["field_names"]
+
+    def get_conditional_fields_dict(self) -> dict[str, str]:
+        if "conditional_fields" not in self._data_structs:
+            dff = (
+                self._data_loader.get_metadata_df()
+                .loc[:, ["field_name", "branching_logic"]]
+                .replace("", pd.NA)
+            )
+            self._data_structs["conditional_fields"] = (
+                dff[dff["branching_logic"].notna()]
+                .set_index("field_name")
+                .to_dict()["branching_logic"]
+            )
+        return self._data_structs["conditional_fields"]
+
+    def get_embedded_fields_dict(self) -> dict[str, str]:
+        raise NotImplementedError

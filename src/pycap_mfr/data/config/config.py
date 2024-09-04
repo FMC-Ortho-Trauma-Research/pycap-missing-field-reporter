@@ -49,7 +49,9 @@ _METADATA_COLS = [
     "branching_logic",
 ]
 
-EMBEDDED_FIELDS_PATT = r"{(?P<field_name>(?!\d)[a-z0-9_]+(?<!_))(?::icons)?}"
+EMBEDDED_FIELDS_LIT = r"{(?P<field_name>(?![\d_])[a-z0-9_]+(?<!_))(?::icons)?}"
+FIELD_REFERENCE_LIT = r"\['(?P<field_name>(?![\d_])[a-z0-9_]+(?<!_))'\]"
+MISSING_STRING_LIT = r"([\"']?)[\s]*\1"
 
 with Path.open(DATA_DIR / "config" / "redcap_logic_grammar.lark", 'r') as f:
     REDCAP_LOGIC_GRAMMAR = f.read()

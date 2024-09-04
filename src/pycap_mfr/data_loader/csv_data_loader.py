@@ -41,6 +41,10 @@ class CSVDataLoader(DataLoader):
             return cls(cache_dir)
         return cls._instance
 
+    def get_all_df(self) -> dict[str, DataFrame]:
+        self._load_data("ALL")
+        return self._dataframes
+
     def get_project_info_df(self) -> DataFrame:
         self._load_data("project_info")
         return self._dataframes["project_info"]

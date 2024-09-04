@@ -1,0 +1,3 @@
+class Reporter:
+
+    raise NotImplementedError

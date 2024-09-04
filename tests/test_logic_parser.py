@@ -9,6 +9,10 @@ test_strings = {
         "[frailty_score] = '1'",
         "(dff['frailty_score'] == '1')",
     ),
+    "categorical_eq_nan": (
+        "[frailty_score] = ''",
+        "(dff['frailty_score'] == '')",
+    ),
     "numeric_eq": (
         "[num_pushups] = 25",
         "(dff['num_pushups'] == '25')",
@@ -25,8 +29,16 @@ test_strings = {
         "[frailty_score] <> '2'",
         "(dff['frailty_score'] != '2')",
     ),
+    "categorical_neq_alt": (
+        '[frailty_score] != "2"',
+        "(dff['frailty_score'] != '2')",
+    ),
     "numeric_neq": (
         "[num_pushups] <> 30",
+        "(dff['num_pushups'] != '30')",
+    ),
+    "numeric_neq_alt": (
+        "[num_pushups] != 30",
         "(dff['num_pushups'] != '30')",
     ),
     "parentheses_eq": (
@@ -127,7 +139,15 @@ def test_lark_logic_parser() -> None:
             result == expected
         ), f"\nExpected: {expected}\n     Got: {result}"
 
+def test_parser_field_references() -> set[str]:
+    lark_parser = LarkLogicParser()
+    for test_str, _ in test_strings.values():
+        lark_parser.translate(test_str)
+    field_references = lark_parser.get_field_references()
+    assert field_references
+    return field_references
 
 if __name__ == "__main__":
     test_lark_logic_parser()
+    test_parser_field_references()
     print("All tests passed!")
