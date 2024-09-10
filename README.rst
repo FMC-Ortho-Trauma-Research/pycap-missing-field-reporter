@@ -1,11 +1,13 @@
 #########
-PyCap-MFR
+PyCap-DQM
 #########
 
-**Py**\ thonRED\ **Cap-M**\ issing\ **F**\ ield\ **R**\ eporter
-(**PyCap-MFR**) is a Python package which aims to extend the base
-functionality of the `Blank values` rule in the `Data Quality` module on
-**REDCap**.
+**Py**\ thonRED\ **Cap-D**\ Quality\ **Q**\ uality\ **M**\ odule
+(**PyCap-MFR**) is a Python package which aims to implement **REDCap's**
+`Data Quality Module` in Python.
+
+Where applicable (and noted below), the package tries to extend the
+functionality of the base reports found in **REDCap**.
 
 Background
 ==========

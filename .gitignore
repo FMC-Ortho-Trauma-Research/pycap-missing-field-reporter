@@ -13,11 +13,11 @@ __pycache__/
 .vscode/
 .DS_Store
 
+# Testing
+.pytest_cache/
+
 # Data
-cache/
-export/
-logs/
+data/
 
 # Scratch files
 scratch.ipynb
-pipeline.ipynb
