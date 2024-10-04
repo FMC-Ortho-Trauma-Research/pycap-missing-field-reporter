@@ -1,39 +1,41 @@
+from functools import cache
 from pathlib import Path
 
 import pandas as pd
 
-from dqm.config import DATA_DIR, DEFAULT_PYCAP_EXPORT_KWARGS, DF_NAMES
-from dqm.data_loader.data_loader_interface import DataLoaderInterface
+from dqm.config import (
+    DATA_DIR,
+    DEFAULT_PYCAP_EXPORT_KWARGS,
+    DF_COLUMN_NAMES,
+    DF_NAMES,
+ )
+from dqm.data_loader.idata_loader import IDataLoader
 
 
-class CSVDataLoader(DataLoaderInterface):
-    SOURCE_DIR = DATA_DIR / "raw"
-
-    def __init__(self, study_name: str, source_dir: str | Path | None = None) -> None:
-        self._validate_params(study_name=study_name, source_dir=source_dir)
+class CsvDataLoader(IDataLoader):
+    def __init__(
+        self,
+        study_name: str,
+        source_dir: Path | None = None,
+    ) -> None:
+        self._validate_params(study_name, source_dir)
         self._study_name = study_name
-        self._source_dir = Path(source_dir) if source_dir else self.SOURCE_DIR
+        self._source_dir = source_dir if source_dir else DATA_DIR / "raw"
 
-    # TODO: Implement lazy loading of dataframes
-    def get_dataframes(self, dataframes: tuple[str, ...]) -> dict[str, pd.DataFrame]:
-        if not isinstance(dataframes, tuple):
-            err_str = f"Param: dataframes must be of type: tuple[str, ...], not {type(dataframes)}!"
+    @staticmethod
+    def _validate_params(study_name: str, source_dir: Path | None) -> None:
+        if not isinstance(study_name, str):
+            err_str = "Param: study_name must be of type str!"
             raise TypeError(err_str)
-        if not dataframes:
-            err_str = "Param: dataframes must not be an empty tuple!"
-            raise ValueError(err_str)
-        for df_name in dataframes:
-            if not isinstance(df_name, str):
-                err_str = f"Value: '{df_name}' must be of type str!"
-                raise TypeError(err_str)
-            if df_name not in DF_NAMES:
-                err_str = f"Value: '{df_name}' is not a valid dataframe name!"
-                raise ValueError(err_str)
-            if not (source_file := self.source_dir / f"{df_name}.csv").exists():
-                err_str = f"File: '{source_file}' does not exist!"
-                raise FileNotFoundError(err_str)
 
-        return self._load_dataframes_from_csv(dataframes)
+        if source_dir:
+            if not isinstance(source_dir, Path):
+                err_str = "Param: source_dir must be of type Path!"
+                raise TypeError(err_str)
+
+            if not source_dir.is_dir():
+                err_str = "Param: source_dir must be a valid directory!"
+                raise NotADirectoryError(err_str)
 
     @property
     def study_name(self) -> str:
@@ -43,36 +45,59 @@ class CSVDataLoader(DataLoaderInterface):
     def source_dir(self) -> Path:
         return self._source_dir
 
-    @classmethod
-    def _validate_params(cls, study_name: str, source_dir: str | Path | None) -> None:
-        if not isinstance(study_name, str):
-            err_str = f"Param: study_name must be of type str, not {type(study_name)}!"
-            raise TypeError(err_str)
+    @property
+    def field_mapping(self) -> pd.DataFrame:
+        return self._load_data("field_mapping", self.source_dir)
 
-        if source_dir:
-            if isinstance(source_dir, str):
-                source_dir = Path(source_dir)
-            if not source_dir.exists():
-                err_str = f"The Path: '{source_dir}' does not exist!"
-                raise FileNotFoundError(err_str)
-            if not source_dir.is_dir():
-                err_str = f"The Path: '{source_dir}' is not a directory!"
-                raise NotADirectoryError(err_str)
+    @property
+    def field_metadata(self) -> pd.DataFrame:
+        return self._load_data("field_metadata", self.source_dir)
 
-    # TODO: Implement lazy loading of dataframes
-    def _load_dataframes_from_csv(self, dataframes: tuple[str, ...]) -> dict[str, pd.DataFrame]:
-        result_dict = {}
+    @property
+    def form_mapping(self) -> pd.DataFrame:
+        return self._load_data("form_mapping", self.source_dir)
 
-        for df_name in dataframes:
-            try:
-                dff = pd.read_csv(
-                    self.source_dir / f"{df_name}.csv",
-                    **DEFAULT_PYCAP_EXPORT_KWARGS["df_kwargs"],
-                 )
-                result_dict[df_name] = dff
-            except pd.errors.ParserError as e:
-                err_str = f"The file '{df_name}.csv' is not a valid CSV file."
-                raise pd.errors.ParserError(err_str) from e
+    @property
+    def project_data(self) -> pd.DataFrame:
+        return self._load_data("project_data", self.source_dir)
 
-        return result_dict
+    @property
+    def study_data(self) -> pd.DataFrame:
+        return self._load_data("study_data", self.source_dir)
 
+    @staticmethod
+    @cache
+    def _load_data(df_name: str, source_dir: Path) -> pd.DataFrame:
+        file_path = source_dir / f"{df_name}.csv"
+        if not file_path.is_file():
+            err_str = f"File not found: {file_path}"
+            raise FileNotFoundError(err_str)
+        try:
+            dff = pd.read_csv(
+                file_path,
+                **DEFAULT_PYCAP_EXPORT_KWARGS["df_kwargs"],
+            )
+            if df_name == "study_data":
+                return dff
+            return dff.loc[:, DF_COLUMN_NAMES[df_name]]
+        except Exception as e:
+            err_str = f"Error loading data from file: {file_path}"
+            raise RuntimeError(err_str) from e
+
+    def save_to_file(
+        self, df_name: str, export_path: Path = DATA_DIR / "export",
+    ) -> None:
+        if df_name not in DF_NAMES:
+            err_str = f"Invalid df_name param: {df_name}!"
+            raise AttributeError(err_str)
+        if not export_path.is_dir():
+            err_str = f"Invalid export directory: {export_path}"
+            raise NotADirectoryError(err_str)
+        try:
+            getattr(self, df_name).to_csv(
+                export_path / f"{df_name}.csv",
+                index=False,
+             )
+        except Exception as e:
+            err_str = f"Error saving file: {export_path / f'{df_name}.csv'}"
+            raise RuntimeError(err_str) from e

@@ -39,13 +39,17 @@ ignore = [
 
 [lint.extend-per-file-ignores]
 "tests/**/*.py" = [
-    "S101", # Assert statements are fine in tests
+    "B018", # Useless experssions can be used to test logic 
+    "S101", # Assert statements are expected in tests
+    "S105", # Test password strings will show up as hardcoded passwords
     "S311", # Pseudo-RNG are fine in tests
-    "SLF001", # Accessing private members of objects is fine in tests
+    "SLF001", # Accessing private members of objects is fine to test
     "PLR2004", # Magic value comparisons are fine in tests
 ]
 "scratch.ipynb" = [
+    "F401", # Can't be bothered to update imports in scratch file
     "S101", # Assert statements are fine in scratch file
+    "S105", # Test password strings will show up as hardcoded passwords
     "S311", # Pseudo-RNG are fine in scratch file
     "SLF001", # Accessing private members of objects is fine in tests
     "PLR2004", # Magic value comparisons are fine in scratch file
