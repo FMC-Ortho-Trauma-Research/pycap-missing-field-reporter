@@ -1,13 +1,18 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, TypeAlias
 from weakref import WeakValueDictionary
 
 import numpy as np
+from numpy import typing as npt
 from pandas.api.extensions import ExtensionArray, register_extension_dtype
 from pandas.core.dtypes.dtypes import PandasExtensionDtype
 
 from dqm.config import ALLOWED_DATE_FORMATS, MISSING_DATA_CODES
+
+TakeIndexer: TypeAlias = (
+    Sequence[int] | Sequence[np.integer] | npt.NDArray[np.integer]
+)
 
 
 class RedcapNumber:
@@ -54,28 +59,55 @@ class RedcapNumber:
     def __float__(self) -> float:
         return self._num_val
 
-    def __eq__(self, other: "RedcapNumber | float | str") -> bool:
-        try:
-            match self._dtype:
-                case "empty":
-                    if isinstance(other, str):
-                        return other == ""
-                    if any(isinstance(other, dtype) for dtype in (float, int)):
-                        return other == 0
-                    if isinstance(other, RedcapNumber):
-                        return other.dtype == "empty"
-                case "number":
-                    other = float(other)
-                    return self._num_val == other
-                case "code" | "date" | "text":
-                    other = str(other)
-                    return self._str_val == other
-        except (OverflowError, TypeError, ValueError) as e:
-            err_str = f"Invalid comparison between RedcapNumber of dtype:{self._dtype} and {type(other)}"  # NOQA: E501
-            raise TypeError(err_str) from e
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RedcapNumber | str | float | int):
+            return NotImplemented
 
-        return False
+        match self._dtype:
+            case "empty":
+                return self._is_empty_eq(other)
+            case "number":
+                return self._is_eq(other)
+            case "code" | "date" | "text":
+                return self._is_eq(other)
+            case _:
+                return NotImplemented
 
+    def _is_empty_eq(self, other: "RedcapNumber | str | float") -> bool:
+        match other:
+            case RedcapNumber():
+                return any(
+                    (
+                        getattr(other, "dtype", None) == "empty",
+                        getattr(other, "str_val", None) == "",
+                        getattr(other, "num_val", None) == 0.0,
+                    ),
+                )
+            case str():
+                return other in ("", "0", "0.0")
+            case float() | int():
+                return other == 0.0
+            case _:
+                return NotImplemented
+
+    def _is_eq(self, other: "RedcapNumber | str | float") -> bool:
+        match other:
+            case RedcapNumber():
+                if self._dtype == "number":
+                    return self._num_val == getattr(other, "num_val", None)
+                if self._dtype in ("code", "date", "text"):
+                    return self._str_val == getattr(other, "str_val", None)
+                return NotImplemented
+            case str():
+                return self._str_val == other
+            case float() | int():
+                return self._num_val == other
+            case _:
+                return NotImplemented
+
+    # TODO: Fix these methods to handle dates and text better.
+    #       Should perform string comparisons for dates or text values.
+    #       Comparison is based on the dtype of the RedcapNumber object.
     def __lt__(self, other: "RedcapNumber | float") -> bool:
         val = self._validate_number(other)
         return self._num_val < val
@@ -227,8 +259,13 @@ class RedcapNumberArray(ExtensionArray):
             np.copy(self.str_values),
         )
 
-    def take(
-        self, indices, *, allow_fill: bool = False, fill_value=None,
+    # The type hint for take() in base.pyi is different to the documentation
+    def take(  # type: ignore[reportIncompatibleMethodOverride]
+        self,
+        indices: TakeIndexer,
+        *,
+        allow_fill: bool = False,
+        fill_value=None,
     ) -> "RedcapNumberArray":
         from pandas.core.algorithms import take
 

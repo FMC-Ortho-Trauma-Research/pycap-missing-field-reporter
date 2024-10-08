@@ -19,7 +19,12 @@ class RedcapDataLoader(IDataLoader):
         self._validate_params(study_name, url, token, export_dir)
         self._study_name = study_name
         self._project = Project(url, token)
-        self._export_dir = export_dir if export_dir else DATA_DIR / "export"
+
+        export_dir_path = DATA_DIR / "export"
+        if not export_dir and not export_dir_path.is_dir():
+           export_dir_path.mkdir(parents=True)
+
+        self._export_dir = export_dir if export_dir else export_dir_path
 
     @staticmethod
     def _validate_params(

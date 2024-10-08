@@ -35,7 +35,6 @@ def rcdl() -> RedcapDataLoader:
     return rcdl
 
 
-
 def get_pycap_method(df_name: str) -> str:
     method = REDCAP_EXPORT_CONFIG[df_name]["export_method"]
     assert isinstance(method, str)
@@ -65,6 +64,22 @@ def test_init_custom_dir_success(mocker: MockerFixture) -> None:
     assert rcdl.export_dir == Path("data")
 
 
+def test_init_default_dir_not_exist(
+mocker: MockerFixture,
+) -> None:
+    mocker.patch("pathlib.Path.is_dir", return_value=False)
+    mock_mkdir = mocker.patch("pathlib.Path.mkdir")
+
+    rcdl_obj = RedcapDataLoader(
+        "study",
+        FAKE_URL,
+        FAKE_TOKEN,
+    )
+
+    assert rcdl_obj.export_dir == DEFAULT_EXPORT_DIR
+    mock_mkdir.assert_called_once_with(parents=True)
+
+
 @pytest.mark.parametrize(
     ("params"),
     [
@@ -92,7 +107,8 @@ def test_init_invalid_dir_path(mocker: MockerFixture) -> None:
 
 
 def test_get_field_mapping_success(
-    rcdl: RedcapDataLoader, mocker: MockerFixture,
+    rcdl: RedcapDataLoader,
+    mocker: MockerFixture,
 ) -> None:
     mocker.patch(
         f"redcap.project.Project.{get_pycap_method('field_mapping')}",
@@ -121,7 +137,8 @@ def test_get_field_mapping_success(
 
 
 def test_get_field_metadata_success(
-    rcdl: RedcapDataLoader, mocker: MockerFixture,
+    rcdl: RedcapDataLoader,
+    mocker: MockerFixture,
 ) -> None:
     mocker.patch(
         f"redcap.project.Project.{get_pycap_method('field_metadata')}",
@@ -160,7 +177,8 @@ def test_get_field_metadata_success(
 
 
 def test_get_form_mapping_success(
-    rcdl: RedcapDataLoader, mocker: MockerFixture,
+    rcdl: RedcapDataLoader,
+    mocker: MockerFixture,
 ) -> None:
     mocker.patch(
         f"redcap.project.Project.{get_pycap_method('form_mapping')}",
@@ -183,7 +201,8 @@ def test_get_form_mapping_success(
 
 
 def test_get_project_data_success(
-    rcdl: RedcapDataLoader, mocker: MockerFixture,
+    rcdl: RedcapDataLoader,
+    mocker: MockerFixture,
 ) -> None:
     mocker.patch(
         f"redcap.project.Project.{get_pycap_method('project_data')}",
@@ -231,7 +250,8 @@ def test_get_project_data_success(
 
 
 def test_get_study_data_success(
-    rcdl: RedcapDataLoader, mocker: MockerFixture,
+    rcdl: RedcapDataLoader,
+    mocker: MockerFixture,
 ) -> None:
     mocker.patch(
         f"redcap.project.Project.{get_pycap_method('study_data')}",

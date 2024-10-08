@@ -46,6 +46,7 @@ def test_init_invalid_dir_path(mocker: MockerFixture) -> None:
 
 
 def test_get_field_mapping_success(mocker: MockerFixture) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
     mocker.patch(
@@ -76,6 +77,7 @@ def test_get_field_mapping_success(mocker: MockerFixture) -> None:
 
 
 def test_get_field_metadata_success(mocker: MockerFixture) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
     mocker.patch(
@@ -117,6 +119,7 @@ def test_get_field_metadata_success(mocker: MockerFixture) -> None:
 
 # TODO: Figure out if this differs for non-longditudinal projects
 def test_get_form_mapping_success(mocker: MockerFixture) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
     mocker.patch(
@@ -141,6 +144,7 @@ def test_get_form_mapping_success(mocker: MockerFixture) -> None:
 
 
 def test_get_project_data_success(mocker: MockerFixture) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
     mocker.patch(
@@ -190,6 +194,7 @@ def test_get_project_data_success(mocker: MockerFixture) -> None:
 
 
 def test_get_study_data_success(mocker: MockerFixture) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
     mocker.patch(
@@ -217,9 +222,15 @@ def test_get_study_data_success(mocker: MockerFixture) -> None:
         "study_data",
     ],
 )
-def test_modify_data_fail(df_name: str) -> None:
+def test_modify_data_fail(df_name: str, mocker: MockerFixture) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
+    mocker.patch(
+        "dqm.data_loader.csv_data_loader.CsvDataLoader._load_data",
+        return_value=pd.DataFrame(),
+     )
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
+
     new_dff = pd.DataFrame()
     _ = getattr(csvdl, df_name)
 
@@ -262,6 +273,7 @@ def test_get_data_missing_data_file(
 def test_get_data_pandas_error(mocker: MockerFixture, df_name: str) -> None:
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
+    mocker.patch("pathlib.Path.is_file", return_value=True)
     mocker.patch("pandas.read_csv", side_effect=pd.errors.ParserError)
 
     with pytest.raises(RuntimeError):
@@ -281,9 +293,14 @@ def test_get_data_pandas_error(mocker: MockerFixture, df_name: str) -> None:
 def test_save_to_file_success_default_dir(
     mocker: MockerFixture, df_name: str,
 ) -> None:
+    mocker.patch("pathlib.Path.is_file", return_value=True)
+    mocker.patch(
+        "dqm.data_loader.csv_data_loader.CsvDataLoader._load_data",
+        return_value=pd.DataFrame(),
+     )
+    mock_to_csv = mocker.patch("pandas.DataFrame.to_csv", return_value=None)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
-    mock_to_csv = mocker.patch("pandas.DataFrame.to_csv", return_value=None)
     _ = getattr(csvdl, df_name)
 
     csvdl.save_to_file(df_name)
@@ -305,10 +322,14 @@ def test_save_to_file_success_default_dir(
 def test_save_to_file_success_custom_dir(
     mocker: MockerFixture, df_name: str,
 ) -> None:
+    mocker.patch("pathlib.Path.is_dir", return_value=True)
+    mocker.patch(
+        "dqm.data_loader.csv_data_loader.CsvDataLoader._load_data",
+        return_value=pd.DataFrame(),
+     )
+    mock_to_csv = mocker.patch("pandas.DataFrame.to_csv", return_value=None)
     csvdl = CsvDataLoader("study")
     csvdl._load_data.cache_clear()
-    mocker.patch("pathlib.Path.is_dir", return_value=True)
-    mock_to_csv = mocker.patch("pandas.DataFrame.to_csv", return_value=None)
     _ = getattr(csvdl, df_name)
 
     csvdl.save_to_file(df_name, Path("fake_dir"))
