@@ -4,54 +4,35 @@ import numpy as np
 import pandas as pd
 import pytest
 from dateutil.parser import parse
+from pytest_mock import MockerFixture
 
 from dqm.redcap_number import RedcapNumber
 
 
 class TestInput(NamedTuple):
-    test_case: str
-    test_input: str
+    test_name: str
+    test_input_str: str
     expected_str_val: str
     expected_num_val: float
 
 missing = TestInput("missing", "", "", 0.0)
 missing_code = TestInput("missing_code", "NA-2", "NA-2", np.nan)
 date = TestInput("date", "2024-09-20", "2024-09-20", np.nan)
+text = TestInput("text", "text", "text", np.nan)
 category = TestInput("category", "2", "2", 2.0)
 numeric = TestInput("numeric", "23.6", "23.6", 23.6)
 
 
 @pytest.fixture(
-    params=[missing, missing_code, date, category, numeric],
-    ids=["missing", "missing_code", "date", "category", "numeric"],
+    params=[missing, missing_code, date, text, category, numeric],
+    ids=["missing", "missing_code", "date", "text", "category", "numeric"],
 )
 def test_input(request: pytest.FixtureRequest) -> TestInput:
     return request.param
 
 
-@pytest.fixture
-def test_input_df() -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "category": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-            "category_missing": ["1", "", "3", "4", "NA-1", "6", "7", " ", "9", "NA-2"],
-            "numeric": ["1", "2.2", "3.45", "3.14", "5", "66", "-7.7", "2", "9.001", "10"],
-            "numeric_missing": ["1", "", "3.45", "3.14", "NA", "66", "7.7", " ", "9.001", "NA-2"],
-            "date_ymd": ["2024-10-1", "2024-10-2", "2024-10-3", "2024-10-4", "2024-10-5", "2024-10-6", "2024-10-7", "2024-10-8", "2024-10-9", "2024-10-10"],
-            "dt_ymd_hm": ["2024-10-1 13:23", "2024-10-2 02:33", "2024-10-3 10:00", "2024-10-4 09:10", "2024-10-5 08:02", "2024-10-6 00:00", "2024-10-7 00:32", "2024-10-8 00:50", "2024-10-9 21:50", "2024-10-10 23:59"],
-            "dt_ymd_hms": ["2024-10-1 13:23:45", "2024-10-2 02:33:45", "2024-10-3 10:00:00", "2024-10-4 09:10:00", "2024-10-5 08:02:00", "2024-10-6 00:00:00", "2024-10-7 00:32:00", "2024-10-8 00:50:00", "2024-10-9 21:50:00", "2024-10-10 23:59:00"],
-            "date_dmy": ["1-10-2024", "2-10-2024", "3-10-2024", "4-10-2024", "5-10-2024", "6-10-2024", "7-10-2024", "8-10-2024", "9-10-2024", "10-10-2024"],
-            "dt_dmy_hm": ["1-10-2024 13:23", "2-10-2024 02:33", "3-10-2024 10:00", "4-10-2024 09:10", "5-10-2024 08:02", "6-10-2024 00:00", "7-10-2024 00:32", "8-10-2024 00:50", "9-10-2024 21:50", "10-10-2024 23:59"],
-            "dt_dmy_hms": ["1-10-2024 13:23:45", "2-10-2024 02:33:45", "3-10-2024 10:00:00", "4-10-2024 09:10:00", "5-10-2024 08:02:00", "6-10-2024 00:00:00", "7-10-2024 00:32:00", "8-10-2024 00:50:00", "9-10-2024 21:50:00", "10-10-2024 23:59:00"],
-            "date_mdy": ["10-1-2024", "10-2-2024", "10-3-2024", "10-4-2024", "10-5-2024", "10-6-2024", "10-7-2024", "10-8-2024", "10-9-2024", "10-10-2024"],
-            "dt_mdy_hm": ["10-1-2024 13:23", "10-2-2024 02:33", "10-3-2024 10:00", "10-4-2024 09:10", "10-5-2024 08:02", "10-6-2024 00:00", "10-7-2024 00:32", "10-8-2024 00:50", "10-9-2024 21:50", "10-10-2024 23:59"],
-            "dt_mdy_hms": ["10-1-2024 13:23:45", "10-2-2024 02:33:45", "10-3-2024 10:00:00", "10-4-2024 09:10:00", "10-5-2024 08:02:00", "10-6-2024 00:00:00", "10-7-2024 00:32:00", "10-8-2024 00:50:00", "10-9-2024 21:50:00", "10-10-2024 23:59:00"],
-            "date_missing": ["2024-10-1", "", "2024-10-3", "2024-10-4", "NA", "2024-10-6", "2024-10-7", " ", "2024-10-9", "NA-2"],
-        },
-    )
-
 def test_init_success(test_input: TestInput) -> None:
-    rc_num = RedcapNumber(test_input.test_input)
+    rc_num = RedcapNumber(test_input.test_input_str)
 
     assert isinstance(rc_num, RedcapNumber)
     assert isinstance(rc_num.str_val, str)
@@ -59,7 +40,7 @@ def test_init_success(test_input: TestInput) -> None:
 
     assert rc_num.str_val == test_input.expected_str_val
 
-    if test_input.test_case in ["date", "missing_code"]:
+    if test_input.test_name in ["date", "text", "missing_code"]:
         assert np.isnan(rc_num.num_val)
     else:
         assert rc_num.num_val == test_input.expected_num_val
@@ -71,8 +52,8 @@ def test_init_invalid_param_type() -> None:
 
 
 def test_init_object_equality(test_input: TestInput) -> None:
-    rc_num_1 = RedcapNumber(test_input.test_input)
-    rc_num_2 = RedcapNumber(test_input.test_input)
+    rc_num_1 = RedcapNumber(test_input.test_input_str)
+    rc_num_2 = RedcapNumber(test_input.test_input_str)
     rc_num_3 = RedcapNumber("other_value")
 
     assert rc_num_1 is rc_num_2
@@ -100,17 +81,6 @@ def test_init_alternate_date_format(date_str: str) -> None:
     assert np.isnan(rc_num.num_val)
 
 
-def test_init_invalid_date() -> None:
-    rc_num = RedcapNumber("Jun 20, 2024")
-
-    assert isinstance(rc_num, RedcapNumber)
-    assert isinstance(rc_num.str_val, str)
-    assert isinstance(rc_num.num_val, float)
-
-    assert rc_num.str_val == "Jun 20, 2024"
-    assert np.isnan(rc_num.num_val)
-
-
 def test_init_negative_number() -> None:
     rc_num = RedcapNumber("-13")
 
@@ -122,77 +92,335 @@ def test_init_negative_number() -> None:
     assert rc_num.num_val == -13.0
 
 
-def test_eq_true(test_input: TestInput) -> None:
-    rc_num = RedcapNumber(test_input.test_input)
+def test_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    assert isinstance(str(rc_num), str)
+    assert str(rc_num) == test_input.expected_str_val
+
+
+def test_float(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    assert isinstance(float(rc_num), float)
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(float(rc_num))
+    else:
+        assert float(rc_num) == test_input.expected_num_val
+
+
+def test_eq(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
 
     assert rc_num == test_input.expected_str_val
 
-
-def test_eq_false(redcap_number: RedcapNumber) -> None:
-    raise NotImplementedError
-
-
-def test_lt_success() -> None:
-    raise NotImplementedError
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+    else:
+        assert rc_num == test_input.expected_num_val
 
 
-def test_lt_invalid_comparison_type() -> None:
-    raise NotImplementedError
+def test_eq_invalid_type() -> None:
+    rcn = RedcapNumber("13")
+
+    assert rcn == 13
+    assert rcn == 13.0
+    assert rcn == "13"
+
+    assert rcn != (13,)
+    assert rcn != [13]
+    assert not rcn == {"value": 13}  # NOQA: SIM201
 
 
-def test_le_success() -> None:
-    raise NotImplementedError
+def test_eq_missing() -> None:
+    rcn = RedcapNumber("")
+    rcn_empty = RedcapNumber("")
+    rcn_0 = RedcapNumber("0")
+    rcn_nan = RedcapNumber("nan")
+
+    assert rcn.dtype == "MISSING"
+    assert rcn == ""
+    assert rcn == 0
+    assert rcn == 0.0
+    assert rcn != "0"
+    assert rcn == rcn_empty
+    assert rcn == rcn_0
+    assert rcn != "other_text"
+    assert rcn != rcn_nan
 
 
-def test_le_invalid_comparison_type() -> None:
-    raise NotImplementedError
+def test_eq_numeric() -> None:
+    rc_num_13 = RedcapNumber("13")
+    rc_num_13_0 = RedcapNumber("13.0")
+
+    assert rc_num_13 == 13
+    assert rc_num_13 == 13.0
+    assert rc_num_13 == "13"
+    assert rc_num_13 != "13.0"
+    assert rc_num_13_0 == 13
+    assert rc_num_13_0 == 13.0
+    assert rc_num_13_0 != "13"
+    assert rc_num_13_0 == "13.0"
+    assert rc_num_13 != rc_num_13_0
+    assert float(rc_num_13) == float(rc_num_13_0)
 
 
-def test_gt_success() -> None:
-    raise NotImplementedError
+def test_lt_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert rc_num != 0
+        assert not rc_num < 0
+        assert not rc_num > 0
+    else:
+        assert rc_num < test_input.expected_num_val + 1
 
 
-def test_gt_invalid_comparison_type() -> None:
-    raise NotImplementedError
+def test_lt_str() -> None:
+    rc_num_4 = RedcapNumber("4")
+    rc_num_13 = RedcapNumber("13")
+
+    assert rc_num_4 < 5
+    assert rc_num_4 < 5.0
+    assert rc_num_4 < "5"
+    assert rc_num_4 < "5.0"
+    assert rc_num_13 < 14
+    assert rc_num_13 < 14.0
+    assert rc_num_13 < "14"
+    assert rc_num_13 < "14.0"
+
+    assert not rc_num_13 < 4
+    assert rc_num_13 < "4"
+    assert rc_num_13 < rc_num_4
 
 
-def test_ge_success() -> None:
-    raise NotImplementedError
+def test_le_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert not rc_num <= 0
+        assert not rc_num > 0
+    else:
+        assert rc_num <= test_input.expected_num_val
+        assert rc_num <= test_input.expected_num_val + 1
+        assert not rc_num <= test_input.expected_num_val - 1
 
 
-def test_ge_invalid_comparison_type() -> None:
-    raise NotImplementedError
+def test_le_str() -> None:
+    rc_num_4 = RedcapNumber("4")
+    rc_num_13 = RedcapNumber("13")
+
+    assert rc_num_4 <= 4
+    assert rc_num_4 <= 4.0
+    assert rc_num_4 <= "4"
+    assert rc_num_4 <= "4.0"
+    assert rc_num_13 <= 13
+    assert rc_num_13 <= 13.0
+    assert rc_num_13 <= "13"
+    assert rc_num_13 <= "13.0"
+
+    assert not rc_num_13 <= 4
+    assert rc_num_13 <= "4"
+    assert rc_num_13 <= rc_num_4
 
 
-def test_add_success() -> None:
-    raise NotImplementedError
+def test_gt_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert rc_num != 0
+        assert not rc_num < 0
+        assert not rc_num > 0
+    else:
+        assert rc_num > test_input.expected_num_val - 1
 
 
-def test_add_invalid_type() -> None:
-    raise NotImplementedError
+def test_gt_str() -> None:
+    rc_num_4 = RedcapNumber("4")
+    rc_num_13 = RedcapNumber("13")
+
+    assert rc_num_4 > 3
+    assert rc_num_4 > 3.0
+    assert rc_num_4 > "3"
+    assert rc_num_4 > "3.0"
+    assert rc_num_13 > 12
+    assert rc_num_13 > 12.0
+    assert rc_num_13 > "12"
+    assert rc_num_13 > "12.0"
+
+    assert not rc_num_4 > 13
+    assert rc_num_4 > "13"
+    assert rc_num_4 > rc_num_13
 
 
-def test_sub_success() -> None:
-    raise NotImplementedError
+def test_ge_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert not rc_num <= 0
+        assert not rc_num > 0
+    else:
+        assert rc_num >= test_input.expected_num_val
+        assert rc_num >= test_input.expected_num_val - 1
+        assert not rc_num >= test_input.expected_num_val + 1
 
 
-def test_sub_invalid_type() -> None:
-    raise NotImplementedError
+def test_ge_str() -> None:
+    rc_num_4 = RedcapNumber("4")
+    rc_num_13 = RedcapNumber("13")
+
+    assert rc_num_4 >= 4
+    assert rc_num_4 >= 4.0
+    assert rc_num_4 >= "4"
+    assert not rc_num_4 >= "4.0"
+    assert rc_num_13 >= 13
+    assert rc_num_13 >= 13.0
+    assert rc_num_13 >= "13"
+    assert not rc_num_13 >= "13.0"
+
+    assert not rc_num_4 >= 13
+    assert rc_num_4 >= "13"
+    assert rc_num_4 >= rc_num_13
 
 
-def test_mul_success() -> None:
-    raise NotImplementedError
+def test_add_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert rc_num + 1 != 1
+        assert rc_num + 1 != 0
+    else:
+        assert isinstance(rc_num + 1, float)
+        assert rc_num + 1 == test_input.expected_num_val + 1
 
 
-def test_mul_invalid_type() -> None:
-    raise NotImplementedError
+def test_add_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+    str_values = ("1", "1.0", "01", "-1", "-1.0", "-01")
+    numeric_values = (1, 1.0, 1, -1, -1.0, -1)
+
+    for str_val, num_val in zip(str_values, numeric_values, strict=True):
+        if test_input.test_name in ["date", "text", "missing_code"]:
+            assert np.isnan(rc_num + str_val)
+        else:
+            assert isinstance(rc_num + str_val, float)
+            assert rc_num + str_val == test_input.expected_num_val + num_val
 
 
-def test_truediv_success() -> None:
-    raise NotImplementedError
+def test_add_invalid_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    assert np.isnan(rc_num + "invalid")
 
 
-def test_truediv_invalid_type() -> None:
-    raise NotImplementedError
+def test_sub_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert rc_num - 1 != 1
+        assert rc_num - 1 != 0
+    else:
+        assert isinstance(rc_num - 1, float)
+        assert rc_num - 1 == test_input.expected_num_val - 1
 
 
+def test_sub_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+    str_values = ("1", "1.0", "01", "-1", "-1.0", "-01")
+    numeric_values = (1, 1.0, 1, -1, -1.0, -1)
+
+    for str_val, num_val in zip(str_values, numeric_values, strict=True):
+        if test_input.test_name in ["date", "text", "missing_code"]:
+            assert np.isnan(rc_num - str_val)
+        else:
+            assert isinstance(rc_num - str_val, float)
+            assert rc_num - str_val == test_input.expected_num_val - num_val
+
+
+def test_sub_invalid_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    assert np.isnan(rc_num - "invalid")
+
+
+def test_mul_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert rc_num * 2 != 2
+        assert rc_num * 2 != 0
+    else:
+        assert isinstance(rc_num * 2, float)
+        assert rc_num * 2 == test_input.expected_num_val * 2
+
+
+def test_mul_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+    str_values = ("2", "2.0", "02", "-2", "-2.0", "-02")
+    numeric_values = (2, 2.0, 2, -2, -2.0, -2)
+
+    for str_val, num_val in zip(str_values, numeric_values, strict=True):
+        if test_input.test_name in ["date", "text", "missing_code"]:
+            assert np.isnan(rc_num * str_val)
+        else:
+            assert isinstance(rc_num * str_val, float)
+            assert rc_num * str_val == test_input.expected_num_val * num_val
+
+
+def test_mul_invalid_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    assert np.isnan(rc_num * "invalid")
+
+
+def test_truediv_numeric(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    if test_input.test_name in ["date", "text", "missing_code"]:
+        assert np.isnan(rc_num.num_val)
+        assert rc_num / 2 != 2
+        assert rc_num / 2 != 0
+    else:
+        assert isinstance(rc_num / 2, float)
+        assert rc_num / 2 == test_input.expected_num_val / 2
+
+
+def test_truediv_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+    str_values = ("2", "2.0", "02", "-2", "-2.0", "-02")
+    numeric_values = (2, 2.0, 2, -2, -2.0, -2)
+
+    for str_val, num_val in zip(str_values, numeric_values, strict=True):
+        if test_input.test_name in ["date", "text", "missing_code"]:
+            assert np.isnan(rc_num / str_val)
+        else:
+            assert isinstance(rc_num / str_val, float)
+            assert rc_num / str_val == test_input.expected_num_val / num_val
+
+
+def test_truediv_invalid_str(test_input: TestInput) -> None:
+    rc_num = RedcapNumber(test_input.test_input_str)
+
+    assert np.isnan(rc_num / "invalid")
+
+
+def test_truediv_zero() -> None:
+    rc_num = RedcapNumber("13")
+
+    result = rc_num / 0
+
+    assert np.isnan(result)
+
+
+def test_arithmetic_unsupported_type() -> None:
+    rc_num = RedcapNumber("13")
+
+    with pytest.raises(NotImplementedError):
+        _ = rc_num * [13]
