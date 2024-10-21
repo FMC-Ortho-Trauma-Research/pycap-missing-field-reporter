@@ -6,7 +6,7 @@ import pytest
 from dateutil.parser import parse
 from pytest_mock import MockerFixture
 
-from dqm.redcap_number import RedcapNumber
+from dqm.redcap_number import RedcapNumber, RedcapNumberArray
 
 
 class TestInput(NamedTuple):
@@ -424,3 +424,22 @@ def test_arithmetic_unsupported_type() -> None:
 
     with pytest.raises(NotImplementedError):
         _ = rc_num * [13]
+
+
+# TODO: Figure out if this is a real Pylance error
+def test_init_pandas_extension_dtype_success() -> None:
+    response_values = ["", "NA-2", "2024-09-20", "text", "2", "23.6"]
+    base_series = pd.Series(response_values, dtype="object")
+
+    rcn_arr = pd.array(response_values, dtype="rc_num")
+    rcn_series = pd.Series(response_values, dtype="rc_num")
+    rcn_series_from_base = base_series.astype(dtype="rc_num")
+
+    assert isinstance(rcn_arr, RedcapNumberArray)
+    assert len(rcn_arr) == len(response_values)
+
+    assert isinstance(rcn_series, pd.Series)
+    assert len(rcn_series) == len(response_values)
+
+    assert isinstance(rcn_series_from_base, pd.Series)
+    assert len(rcn_series_from_base) == len(response_values)

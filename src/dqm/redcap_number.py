@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable, Sequence
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import ClassVar, TypeAlias
 from weakref import WeakValueDictionary
 
@@ -165,7 +165,7 @@ class RedcapNumber:
 
     def __repr__(self) -> str:
         """Returns details of the REDCapNumber object."""
-        return f"<class 'RedcapNumber': str_val='{self._str_val}', num_val={self._num_val}, dtype={self._dtype}"  # NOQA: E501
+        return f"<class 'RedcapNumber': str_val='{self._str_val}', num_val={self._num_val}, dtype={self._dtype}>"  # NOQA: E501
 
     def __str__(self) -> str:
         """Returns the string representation of the response value."""
@@ -174,6 +174,23 @@ class RedcapNumber:
     def __float__(self) -> float:
         """Returns the numeric representation of the response value."""
         return self._num_val
+
+    def __hash__(self) -> int:
+        """
+        Returns the hash of response value represented by this
+        RedcapNumber instance.
+
+        This method returns the hash of the string representation of the
+        response value since the string representation is unique for
+        every instance of the RedcapNumber class.
+
+        Returns
+        -------
+        int
+            The hash of the string representation of the response value.
+
+        """
+        return hash(self._str_val)
 
     def __eq__(self, other: object) -> bool:
         """
@@ -660,7 +677,7 @@ class RedcapNumber:
         """
         return self._calculate_new_val(other, lambda self, other: self / other)
 
-    #TODO: Check 12.0 + 1
+    # TODO: Check 12.0 + 1
     # Complains about too many return statements (7 > 6), but I think it's fine
     def _calculate_new_val(self, other: object, calc_func: Callable) -> float:  # NOQA: PLR0911
         """
@@ -774,7 +791,7 @@ class RedcapNumber:
         else:
             return True
 
-    #TODO: Investigate if returning NotImplemented is a better approach
+    # TODO: Investigate if returning NotImplemented is a better approach
     def _validate_other(self, other: object) -> None:
         """
         Validate the type of the other object for comparison or
@@ -805,27 +822,35 @@ class RedcapNumber:
             raise NotImplementedError(err_str)
 
 
-# TODO: Finish docstring
 @register_extension_dtype
 class RedcapNumberDtype(PandasExtensionDtype):
     """
-    A custom pandas extension dtype for RedcapNumber.
+    An extension dtype for representing REDCap-style response values in
+    pandas DataFrames and Series.
 
-    This class defines a custom pandas extension dtype for handling
-    RedcapNumber objects within pandas DataFrames. It allows for ...
+    This dtype is designed to allow data from REDCap stored in pandas
+    data structures to mimic REDCap's internal handling of response
+    values. i.e. Data is stored as strings internally, but can be
+    coerced to numeric values depending on context.
 
     Attributes
     ----------
     name : str
-        The name of the custom dtype, used for identifying the dtype
-        within pandas operations. The value is "rc_num".
+        The name of the custom dtype ("rc_num"). This is used for
+        identifying the dtype within pandas operations. e.g.
+            - pd.array(["1", "2", "3"], dtype="rc_num")
+            - pd.Series(["1", "2", "3"], dtype="rc_num")
+            - Series.astype("rc_num")
+
     type : type
-        The type associated with this dtype, which is RedcapNumber.
+        The scalar type associated with this dtype ("RedcapNumber").
 
     Methods
     -------
     __str__() -> str
         Returns the name of the custom dtype.
+    _is_numeric() -> bool
+        Specifies that the dtype is numeric for some pandas operations.
     construct_array_type() -> type[RedcapNumberArray]
         Returns the array type associated with this dtype, which is
         RedcapNumberArray.
@@ -836,10 +861,25 @@ class RedcapNumberDtype(PandasExtensionDtype):
     type = RedcapNumber
 
     def __str__(self) -> str:
+        """Returns the name of the custom dtype."""
         return self.name
+
+    @property
+    def _is_numeric(self) -> bool:
+        """Specifies that the dtype is numeric."""
+        return True
 
     @classmethod
     def construct_array_type(cls) -> "type[RedcapNumberArray]":
+        """
+        Returns the array type associated with this dtype.
+
+        Returns
+        -------
+        type[RedcapNumberArray]
+            The `RedcapNumberArray` class associated with this dtype.
+
+        """
         return RedcapNumberArray
 
 
@@ -850,21 +890,16 @@ class RedcapNumberArray(ExtensionArray):
         Sequence[int] | Sequence[np.integer] | npt.NDArray[np.integer]
     )
 
-    class CopyStrategy(Enum):
-        COPY = True
-        OPPORTUNISTIC = None
-        NO_COPY = False
-
     def __init__(
         self,
         num_values: Iterable[float],
         str_values: Iterable[str],
-        dtype_strings: Iterable[str],
-        copy: bool = False,  # NOQA: FBT001, FBT002
+        dtype_strings: Iterable[RCNDtype],
+        copy: bool = False,
     ) -> None:
-        self.num_values = np.array(num_values, dtype=np.float64, copy=copy)
-        self.str_values = np.array(str_values, dtype=object, copy=copy)
-        self.dtypes = np.array(dtype_strings, dtype=object, copy=copy)
+        self.num_values = np.asarray(num_values, dtype=np.float64)
+        self.str_values = np.asarray(str_values, dtype=object)
+        self.dtypes = np.asarray(dtype_strings, dtype=object)
 
     @classmethod
     def _from_sequence(
@@ -872,7 +907,7 @@ class RedcapNumberArray(ExtensionArray):
         scalars: Iterable[str],
         *,
         dtype: str | None = None,  # NOQA: ARG003
-        copy: bool = False,
+        copy: bool = False,  # NOQA: ARG003
     ) -> "RedcapNumberArray":
         num_values, str_values, dtype_strings = zip(
             *[
@@ -889,7 +924,6 @@ class RedcapNumberArray(ExtensionArray):
             num_values,
             str_values,
             dtype_strings,
-            copy=copy,
         )
 
     def __getitem__(
@@ -938,23 +972,34 @@ class RedcapNumberArray(ExtensionArray):
     # like the superclass __eq__ method, but this is the correct return type
     # according to the pandas documentation.
     # See: pandas/core/arrays/base.py where the devs ignore the same error.
-    # TODO: Support for equality comparison with Sequences
     def __eq__(self, other: object) -> np.ndarray:  # type: ignore[reportIncompatibleMethodOverride]
         if not isinstance(other, RedcapNumber | str | float | int):
             return NotImplemented
 
+        missing_mask = self.dtypes == RCNDtype.MISSING
+        text_mask = self.dtypes == RCNDtype.TEXT
+        number_mask = self.dtypes == RCNDtype.NUMBER
+
         result = np.empty(self.num_values.size, dtype=bool)
 
-        for idx, dtype_str in enumerate(self.dtypes):
-            match dtype_str:
-                case RCNDtype.MISSING:
-                    result[idx] = self._is_other_eq_missing(other)
-                case RCNDtype.TEXT:
-                    result[idx] = self._is_other_eq_txt(other, idx)
-                case RCNDtype.NUMBER:
-                    result[idx] = self._is_other_eq_num(other, idx)
-                case _:
-                    return NotImplemented
+        if isinstance(other, RedcapNumber):
+            result = (
+                np.where(missing_mask, self._is_other_eq_missing(other), False)  # NOQA: FBT003
+                | np.where(text_mask, self.str_values == other.str_val, False)  # NOQA: FBT003
+                | np.where(number_mask, self.str_values == other.str_val, False)  # NOQA: FBT003, E501
+            )
+        elif isinstance(other, str):
+            result = (
+                np.where(missing_mask, other == "", False)  # NOQA: FBT003
+                | np.where(text_mask, self.str_values == other, False)  # NOQA: FBT003
+                | np.where(number_mask, self.str_values == other, False)  # NOQA: FBT003
+            )
+        elif isinstance(other, float | int):
+            result = (
+                np.where(missing_mask, other == 0.0, False)  # NOQA: FBT003
+                | np.where(text_mask, False, False)  # NOQA: FBT003
+                | np.where(number_mask, self.num_values == other, False)  # NOQA: FBT003
+            )
 
         return result
 
@@ -978,35 +1023,6 @@ class RedcapNumberArray(ExtensionArray):
             case _:
                 return NotImplemented
 
-    def _is_other_eq_txt(
-        self,
-        other: "RedcapNumber | str | float",
-        idx: int,
-    ) -> bool:
-        match other:
-            case RedcapNumber():
-                return self.str_values[idx] == other.str_val
-            case str():
-                return self.str_values[idx] == other
-            case float() | int():
-                return False
-            case _:
-                return NotImplemented
-
-    def _is_other_eq_num(
-        self,
-        other: "RedcapNumber | str | float",
-        idx: int,
-    ) -> bool:
-        match other:
-            case RedcapNumber():
-                return self.str_values[idx] == other.str_val
-            case str():
-                return self.str_values[idx] == other
-            case float() | int():
-                return self.num_values[idx] == other
-            case _:
-                return NotImplemented
 
     # The type hint for take() in base.pyi is different to the documentation
     def take(  # type: ignore[reportIncompatibleMethodOverride]
